@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">IDP Ankesa</string>
+    <string name="action_settings">Settings</string>
+    <string name="rreth_nesh">Rreth Nesh</string>
+    <string name="title_activity_scrolling">Bëj një ankesë</string>
+    <string name="fourthElOfAbout">Gabriel Kuka - Orges Mihaj</string>
+    <string name="firstElOfAbout">info@idp.al</string>
+    <string name="secondElOfAbout">+355 42 237200</string>
+    <string name="thirdElOfAbout">+355 42 233977</string>
+    <string name="FifthElOfAbout">Rr. e Kavajës, Nd.80, H.1, Tiranë</string>
+    <string name="chosen">Identifikimi u zgjodh</string>
+    <string name="uploadID">Vendos ID</string>
+    <string name="ok">Vazhdo</string>
+    <string name="passDialogTitle">Vendos fjalëkalmin e email-it</string>
+    <string name="captchatitle">Plotëso</string>
+</resources>

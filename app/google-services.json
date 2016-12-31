@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "111676804165",
+    "project_id": "idp-ankesa-1482345969718"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111676804165:android:5a0cfa3047c56705",
+        "android_client_info": {
+          "package_name": "com.ankesa.idp.idpankesa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "111676804165-deimr3amqqcvopnafbjddjbt7bkf7i70.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ankesa.idp.idpankesa",
+            "certificate_hash": "C5AE9C49E2CDA9080604E702DFCF6F36A918788B"
+          }
+        },
+        {
+          "client_id": "111676804165-relia113v91ggfb27fs2lb961b8r4b60.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlD17BuIpg7ixwnpGAX2nPNu2mxT8_XZA"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
