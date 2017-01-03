@@ -1,15 +1,19 @@
 package com.ankesa.idp.idpankesa;
 
 import android.Manifest;
+import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -29,44 +33,64 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
+import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.GmailScopes;
+import com.google.api.services.gmail.model.Message;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
-import javax.mail.AuthenticationFailedException;
 import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import ernestoyaquello.com.verticalstepperform.VerticalStepperFormLayout;
 import ernestoyaquello.com.verticalstepperform.fragments.BackConfirmationFragment;
 import ernestoyaquello.com.verticalstepperform.interfaces.VerticalStepperForm;
+
+import static android.R.id.message;
+
 
 public class BlankActivity extends AppCompatActivity implements VerticalStepperForm {
 
     public static final String STATE_NAME = "Name";
     public static final String STATE_EMAIL = "Email";
     public static final String STATE_ADRESA = "Adresa";
-    public static final String STATE_QYTETI = "Qyteti";
     public static final String STATE_TELEFON = "Telefoni";
     public static final String STATE_KONTROLLUESI = "Kontrolluesi";
     public static final String STATE_ADKONTROLLUESIT = "Adresa e Kontrolluesit";
-    public static final String STATE_QYTETIKONTROLLUESIT = "Qyteti i kontrolluesit";
     public static final String STATE_ANKESA = "Ankesa e qytetarit";
     public static final String STATE_KERKESA = "Kerkesa e qytetarit";
 
-    //File manager vars
+
     static final int FILE_MANAGER_DIALOG_ID = 1998;
     private static final int NAME_STEP_NUM = 0;
     private static final int EMAIL_STEP_NUM = 1;
     private static final int ADRESA_STEP_NUM = 2;
-    private static final int QYTETI_STEP_NUM = 3;
-    private static final int TELEFON_STEP_NUM = 4;
-    private static final int KONTROLLUESI_STEP_NUM = 5;
-    private static final int ADKONTROLLUESIT_STEP_NUM = 6;
-    private static final int QYTETIKONTROLLUESIT_STEP_NUM = 7;
-    private static final int ANKESA_STEP_NUM = 8;
-    private static final int KERKESA_STEP_NUM = 9;
+    private static final int TELEFON_STEP_NUM = 3;
+    private static final int KONTROLLUESI_STEP_NUM = 4;
+    private static final int ADKONTROLLUESIT_STEP_NUM = 5;
+    private static final int ANKESA_STEP_NUM = 6;
+    private static final int KERKESA_STEP_NUM = 7;
     private static final int MIN_CHARACTERS_emri = 5;
     private static final int PASSWORD_DIALOG = 123456;
     private static final int CAPTCHA_DIALOG = 123456789;
@@ -77,30 +101,23 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     ListView dialogListView;
     Dialog dialog;
     FileValidation fileValidation;
+
     EmailPassword emailPassword;
     private boolean confirmBack = true;
     private ProgressDialog progressDialog;
     private boolean beforeTextChanged = true;
-    // Name step
-    private EditText nameEditText;
-    // Email step
-    private EditText emailEditText;
-    // Adresa step
-    private EditText adresaEditText;
-    // Qyteti step
-    private EditText qytetiEditText;
-    // Telefon step
-    private EditText telefonEditText;
+
+    //qytetari
+    public EditText nameEditText;
+    public EditText emailEditText;
+    public EditText adresaEditText;
+    public EditText telefonEditText;
     // Kontrolluesi step
-    private EditText kontrolluesiEditText;
-    // Adresa e kontrolluesit step
-    private EditText adkontrolluesitEditText;
-    // Qyteti i kontrolluesit step
-    private EditText qytetiKontrolluesitEditText;
-    // Ankesa step
-    private EditText ankesaEditText;
-    // Kerkesa step
-    private EditText kerkesaEditText;
+    public EditText kontrolluesiEditText;
+    public EditText adkontrolluesitEditText;
+    public EditText ankesaEditText;
+    public EditText kerkesaEditText;
+
     private VerticalStepperFormLayout verticalStepperForm;
     private List<String> fileList = new ArrayList<>();
     private boolean[] fileTypes;
@@ -110,7 +127,26 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     private EditText password;
     private EditText captchaAnswer;
     private Captcha c;
-    private  ImageView captchaImage;
+    private ImageView captchaImage;
+
+    String bodyMessage;
+
+    MakeRequestTask email;
+
+    public GoogleAccountCredential mCredential;
+    private static final String PREF_ACCOUNT_NAME = "accountName";
+    private static final String[] SCOPES = {
+            GmailScopes.GMAIL_LABELS,
+            GmailScopes.GMAIL_COMPOSE,
+            GmailScopes.GMAIL_INSERT,
+            GmailScopes.GMAIL_MODIFY,
+            GmailScopes.GMAIL_READONLY,
+            GmailScopes.MAIL_GOOGLE_COM
+    };
+
+    ConnectivityState cS;
+
+    public BlankActivity(){}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,13 +155,20 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            nameExtra = extras.getString("NAME");
-            emailExtra = extras.getString("EMAIL");
-        }
+
+//        Bundle extras = getIntent().getExtras();
+//        if (extras != null) {
+//            nameExtra = extras.getString("NAME");
+//            emailExtra = extras.getString("EMAIL");
+//        }
 
         permissionCheckForMarshmallow(); // <- Grants run-time permission (for marshmallow)
+
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(SCOPES))
+                .setBackOff(new ExponentialBackOff());
+
+        cS = new ConnectivityState(this);
 
         fileValidation = new FileValidation(false);
 
@@ -140,23 +183,96 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         root = new File(Environment.getExternalStorageDirectory().getAbsolutePath());
         curFolder = root;
 
-        String[] stepsemris = {"Emri dhe mbiemri", "Email-i", "Adresa", "Qyteti", "Telefoni", "Kontrolluesi publik ose privat", "Adresa e kontrolluesit", "Qyteti i kontrolluesit", "Ankesa", "Kërkesa"};
+        emailPassword = new EmailPassword();
+
+        String[] stepTitles = {"Emri dhe mbiemri", "Email-i", "Adresa", "Telefoni", "Kontrolluesi publik ose privat", "Adresa e kontrolluesit", "Ankesa", "Kërkesa"};
         int colorPrimary = ContextCompat.getColor(getApplicationContext(), R.color.colorPrimary);
         int colorPrimaryDark = ContextCompat.getColor(getApplicationContext(), R.color.colorPrimaryDark);
 
         // Here we find and initialize the form
         verticalStepperForm = (VerticalStepperFormLayout) findViewById(R.id.vertical_stepper_form);
-        VerticalStepperFormLayout.Builder.newInstance(verticalStepperForm, stepsemris, this, this)
+        VerticalStepperFormLayout.Builder.newInstance(verticalStepperForm, stepTitles, this, this)
                 .primaryColor(colorPrimary)
                 .primaryDarkColor(colorPrimaryDark)
                 .displayBottomNavigation(true)
                 .showVerticalLineWhenStepsAreCollapsed(true)
                 .init();
 
-        emailPassword = new EmailPassword();
+    }
+
+
+                                                                    /* File manager methods
+                                                                       ↓↓↓↓↓↓↓↓↓↓
+                                                                    */
+
+    // Lists the files and folders of the device when the users wants to upload his document
+    void ListFolders(File f) {
+        if (f.equals(root)) {
+            fileManagerBackButton.setEnabled(false);
+        } else {
+            fileManagerBackButton.setEnabled(true);
+        }
+
+        curFolder = f;
+        currentPathText.setText(f.getPath());
+
+        File[] files = f.listFiles();
+        fileList.clear();
+
+        int fileTypesIndex = -1;
+
+
+        modelItems = new Model[files.length];
+        fileTypes = new boolean[files.length];
+
+        for (File file : files) {
+            fileList.add(file.getPath());
+            setTypeOfFile(file, ++fileTypesIndex);
+
+        }
+
+        for (int x = 0; x < files.length; x++) {
+            if (fileTypes[x])
+                modelItems[x] = new Model(fileList.get(x).substring(fileList.get(x).lastIndexOf("/") + 1), true);
+            else
+                modelItems[x] = new Model(fileList.get(x).substring(fileList.get(x).lastIndexOf("/") + 1), false);
+        }
+
+        CustomAdapter adapter = new CustomAdapter(BlankActivity.this, modelItems);
+        dialogListView.setAdapter(adapter);
 
     }
 
+    public void setTypeOfFile(File file, int a) {
+        fileTypes[a] = file.isDirectory();
+    }
+
+    // Validates the file sectected by the user
+    public void validateFileSelected(File file) {
+        if (file.getPath().endsWith(".jpg") || file.getPath().endsWith(".png") || file.getPath().endsWith(".pdf") || file.getPath().endsWith(".tiff") || file.getPath().endsWith(".doc") || file.getPath().endsWith(".bmp") || file.getPath().endsWith(".jpeg")) {
+            buttonOpenDialog.setText(R.string.chosen);
+            Toast.makeText(BlankActivity.this, "Dokumenti " + getFileName(selected) + " u zgjodh.",
+                    Toast.LENGTH_LONG).show();
+            fileValidation.setFileValidated(true);
+        } else {
+            buttonOpenDialog.setText(R.string.uploadID);
+            Toast.makeText(BlankActivity.this, "Dokumenti që zgjodhët nuk është i vlefshëm.",
+                    Toast.LENGTH_LONG).show();
+            fileValidation.setFileValidated(false);
+        }
+    }
+
+    // Returns the name of the file the user has selected
+    public String getFileName(File file) {
+        return file.getPath().substring(file.toString().lastIndexOf("/") + 1);
+    }
+
+
+
+
+                                                                    /* Dialog methods
+                                                                       ↓↓↓↓↓↓↓↓↓↓
+                                                                    */
     @Override
     protected Dialog onCreateDialog(int id) {
 
@@ -251,26 +367,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return dialog;
     }
 
-    // Validates the file sectected by the user
-    public void validateFileSelected(File file) {
-        if (file.getPath().endsWith(".jpg") || file.getPath().endsWith(".png") || file.getPath().endsWith(".pdf") || file.getPath().endsWith(".tiff") || file.getPath().endsWith(".doc") || file.getPath().endsWith(".bmp") || file.getPath().endsWith(".jpeg")) {
-            buttonOpenDialog.setText(R.string.chosen);
-            Toast.makeText(BlankActivity.this, "Dokumenti " + getFileName(selected) + " u zgjodh.",
-                    Toast.LENGTH_LONG).show();
-            fileValidation.setFileValidated(true);
-        } else {
-            buttonOpenDialog.setText(R.string.uploadID);
-            Toast.makeText(BlankActivity.this, "Dokumenti që zgjodhët nuk është i vlefshëm.",
-                    Toast.LENGTH_LONG).show();
-            fileValidation.setFileValidated(false);
-        }
-    }
-
-    // Returns the name of the file the user has selected
-    public String getFileName(File file) {
-        return file.getPath().substring(file.toString().lastIndexOf("/") + 1);
-    }
-
     @Override
     protected void onPrepareDialog(int id, Dialog dialog) {
         super.onPrepareDialog(id, dialog);
@@ -281,143 +377,32 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         }
     }
 
-    // Returns the dialog created for the file manager
-    private Dialog getDialog() {
+    public Dialog getDialog() {
 
         return dialog;
 
     }
 
-    // Lists the files and folders of the device when the users wants to upload his document
-    void ListFolders(File f) {
-        if (f.equals(root)) {
-            fileManagerBackButton.setEnabled(false);
-        } else {
-            fileManagerBackButton.setEnabled(true);
+    private void dismissDialog() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
         }
-
-        curFolder = f;
-        currentPathText.setText(f.getPath());
-
-        File[] files = f.listFiles();
-        fileList.clear();
-
-        int fileTypesIndex = -1;
-
-
-        modelItems = new Model[files.length];
-        fileTypes = new boolean[files.length];
-
-        for (File file : files) {
-            fileList.add(file.getPath());
-            setTypeOfFile(file, ++fileTypesIndex);
-
-        }
-
-        for (int x = 0; x < files.length; x++) {
-            if (fileTypes[x])
-                modelItems[x] = new Model(fileList.get(x).substring(fileList.get(x).lastIndexOf("/") + 1), true);
-            else
-                modelItems[x] = new Model(fileList.get(x).substring(fileList.get(x).lastIndexOf("/") + 1), false);
-        }
-
-        CustomAdapter adapter = new CustomAdapter(BlankActivity.this, modelItems);
-        dialogListView.setAdapter(adapter);
-
+        progressDialog = null;
     }
 
 
-    public void setTypeOfFile(File file, int a) {
-        fileTypes[a] = file.isDirectory();
-    }
 
-
-    @Override
-    public View createStepContentView(int stepNumber) {
-        View view = null;
-        switch (stepNumber) {
-            case NAME_STEP_NUM:
-                view = createNameStep();
-                break;
-            case EMAIL_STEP_NUM:
-                view = createEmailStep();
-                break;
-            case ADRESA_STEP_NUM:
-                view = createAdresaStep();
-                break;
-            case QYTETI_STEP_NUM:
-                view = createQytetiStep();
-                break;
-            case TELEFON_STEP_NUM:
-                view = createTelefonStep();
-                break;
-            case KONTROLLUESI_STEP_NUM:
-                view = createKontrolluesiStep();
-                break;
-            case ADKONTROLLUESIT_STEP_NUM:
-                view = createADKontrolluesiStep();
-                break;
-            case QYTETIKONTROLLUESIT_STEP_NUM:
-                view = createQytetiKontrolluesitStep();
-                break;
-            case ANKESA_STEP_NUM:
-                view = createAnkesaStep();
-                break;
-            case KERKESA_STEP_NUM:
-                view = createKerkesaStep();
-                break;
-        }
-        return view;
-    }
-
-    @Override
-    public void onStepOpening(int stepNumber) {
-        switch (stepNumber) {
-            case NAME_STEP_NUM:
-                // When this step is open, we check that the emri is correct
-                checkNameStep(nameEditText.getText().toString());
-                break;
-            case EMAIL_STEP_NUM:
-                checkEmailStep(emailEditText.getText().toString());
-                break;
-            case ADRESA_STEP_NUM:
-                checkAdresaStep(adresaEditText.getText().toString());
-                break;
-            case QYTETI_STEP_NUM:
-                checkQytetiStep(qytetiEditText.getText().toString());
-                break;
-            case TELEFON_STEP_NUM:
-                checkTelefoniStep(telefonEditText.getText().toString());
-                break;
-            case KONTROLLUESI_STEP_NUM:
-                checkKontrolluesiStep(kontrolluesiEditText.getText().toString());
-                break;
-            case ADKONTROLLUESIT_STEP_NUM:
-                checkAdKontrolluesiStep(adkontrolluesitEditText.getText().toString());
-                break;
-            case QYTETIKONTROLLUESIT_STEP_NUM:
-                checkQytetiKontrolluesitStep(qytetiKontrolluesitEditText.getText().toString());
-                break;
-            case ANKESA_STEP_NUM:
-                checkAnkesaStep(ankesaEditText.getText().toString());
-                break;
-            case KERKESA_STEP_NUM:
-                checkKerkesaStep(kerkesaEditText.getText().toString());
-                break;
-        }
-    }
+                                                                        /* Send methods
+                                                                           ↓↓↓↓↓↓↓↓↓↓
+                                                                        */
 
     @Override
     public void sendData() {
 
-        ConnectivityState cS = new ConnectivityState(this);
+
         if (cS.isConnected()) {
 
-            if (emailEditText.getText().toString().contains("@gmail.com")) {
-                showDialog(PASSWORD_DIALOG);
-            } else {
-                showDialog(CAPTCHA_DIALOG);
-            }
+            showDialog(CAPTCHA_DIALOG);
         } else {
             displayMessage("Ju nuk jeni lidhur me internet.");
         }
@@ -427,14 +412,12 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     private void executeDataSending() {
         Log.d("Email-i: ", emailEditText.getText().toString());
         final String CC = emailEditText.getText().toString();
-        final String subject = "Ankesë për IDP";
-        final String message = "Emri/Mbiemri: " + nameEditText.getText().toString() + System.lineSeparator() + "Adresa: " + adresaEditText.getText().toString() + System.lineSeparator()
-                + "Qyteti: " + qytetiEditText.getText().toString() + System.lineSeparator() + System.lineSeparator()
+        //final String subject = "Ankesë për IDP";
+        bodyMessage = "Emri/Mbiemri: " + nameEditText.getText().toString() + System.lineSeparator() + "Adresa: " + adresaEditText.getText().toString() + System.lineSeparator()
                 + "Telefoni: " + telefonEditText.getText().toString() + System.lineSeparator() + System.lineSeparator()
                 + "E-mail-i: " + emailEditText.getText().toString() + System.lineSeparator() + System.lineSeparator() + System.lineSeparator()
                 + "Kontrolluesi publik ose privat: " + kontrolluesiEditText.getText().toString() + System.lineSeparator() + System.lineSeparator()
                 + "Adresa: " + adkontrolluesitEditText.getText().toString() + System.lineSeparator() + System.lineSeparator()
-                + "Qyteti: " + qytetiKontrolluesitEditText.getText().toString() + System.lineSeparator() + System.lineSeparator()
                 + "Përshkruani çdo veprim të pretenduar si shkelje nga Kontrolluesi: " + System.lineSeparator() + System.lineSeparator()
                 + "~~~~~" + System.lineSeparator() + ankesaEditText.getText().toString() + System.lineSeparator() + "~~~~~" + System.lineSeparator() + System.lineSeparator()
                 + "Përshkruani çfarë kërkoni nga Komisioneri për të Drejtën e Informimit dhe Mbrojtjen e të Dhënave Personale: " + System.lineSeparator() + System.lineSeparator()
@@ -442,19 +425,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 + "Data: " + new SimpleDateFormat("dd/MM/yyyy").format(new Date());
 
         if (emailEditText.getText().toString().contains("@gmail.com")) {
-
-
-            SendEmailAsyncTask email = new SendEmailAsyncTask();
-            email.activity = this;
-            email.m = new Mail(emailExtra, emailPassword.getPassword());
-
-            String[] toArr = {"kristi_semi@outlook.com"};
-
-            email.m.setTo(toArr);
-            email.m.setFrom(CC);
-            email.m.setSubject(subject);
-            email.m.setBody(message);
-            email.execute();
+            getResultsFromApi();
         } else {
 
 
@@ -467,7 +438,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                         Intent intent = new Intent(Intent.ACTION_SENDTO);
                         intent.setType("message/rfc822");
                         setResult(RESULT_OK, intent);
-                        intent.setData(Uri.parse("mailto:" + "gabrie.kuka@gmail.com"));
+                        intent.setData(Uri.parse("mailto:" + "kristi_semi@outlook.com"));
                         intent.putExtra(Intent.EXTRA_CC, CC);
                         intent.putExtra(Intent.EXTRA_SUBJECT, "Ankesë për IDP");
                         intent.putExtra(Intent.EXTRA_TEXT, message);
@@ -492,19 +463,87 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         }
     }
 
+
+
+
+                                                                /* Steps methods
+                                                                   ↓↓↓↓↓↓↓↓↓↓
+
+                                                                */
+
+    @Override
+    public View createStepContentView(int stepNumber) {
+        View view = null;
+        switch (stepNumber) {
+            case NAME_STEP_NUM:
+                view = createNameStep();
+                break;
+            case EMAIL_STEP_NUM:
+                view = createEmailStep();
+                break;
+            case ADRESA_STEP_NUM:
+                view = createAdresaStep();
+                break;
+            case TELEFON_STEP_NUM:
+                view = createTelefonStep();
+                break;
+            case KONTROLLUESI_STEP_NUM:
+                view = createKontrolluesiStep();
+                break;
+            case ADKONTROLLUESIT_STEP_NUM:
+                view = createADKontrolluesiStep();
+                break;
+            case ANKESA_STEP_NUM:
+                view = createAnkesaStep();
+                break;
+            case KERKESA_STEP_NUM:
+                view = createKerkesaStep();
+                break;
+        }
+        return view;
+    }
+
+    @Override
+    public void onStepOpening(int stepNumber) {
+        switch (stepNumber) {
+            case NAME_STEP_NUM:
+                checkNameStep(nameEditText.getText().toString());
+                break;
+            case EMAIL_STEP_NUM:
+                checkEmailStep(emailEditText.getText().toString());
+                break;
+            case ADRESA_STEP_NUM:
+                checkAdresaStep(adresaEditText.getText().toString());
+                break;
+            case TELEFON_STEP_NUM:
+                checkTelefoniStep(telefonEditText.getText().toString());
+                break;
+            case KONTROLLUESI_STEP_NUM:
+                checkKontrolluesiStep(kontrolluesiEditText.getText().toString());
+                break;
+            case ADKONTROLLUESIT_STEP_NUM:
+                checkAdKontrolluesiStep(adkontrolluesitEditText.getText().toString());
+                break;
+            case ANKESA_STEP_NUM:
+                checkAnkesaStep(ankesaEditText.getText().toString());
+                break;
+            case KERKESA_STEP_NUM:
+                checkKerkesaStep(kerkesaEditText.getText().toString());
+                break;
+        }
+    }
+
     private View createNameStep() {
         nameEditText = new EditText(this);
         nameEditText.setHint("Emri");
         nameEditText.setSingleLine(true);
         nameEditText.setWidth(1000);
-        nameEditText.setInputType(InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-        nameEditText.setText(nameExtra);
         nameEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                if (!checkNameStep(s.toString())) {
+
                     beforeTextChanged = true;
-                }
+
             }
 
             @Override
@@ -539,11 +578,10 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         emailEditText.setSingleLine(true);
         emailEditText.setWidth(1000);
         emailEditText.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-        emailEditText.setText(emailExtra);
         emailEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                beforeTextChanged = true;
+                    beforeTextChanged = true;
             }
 
             @Override
@@ -607,43 +645,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         });
 
         return adresaEditText;
-    }
-
-    private View createQytetiStep() {
-        qytetiEditText = new EditText(this);
-        qytetiEditText.setSingleLine(true);
-        qytetiEditText.setHint("Qyteti");
-        qytetiEditText.setWidth(1000);
-        nameEditText.setInputType(InputType.TYPE_CLASS_TEXT);
-        qytetiEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                beforeTextChanged = true;
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                beforeTextChanged = false;
-                checkQytetiStep(s.toString());
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-        qytetiEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (checkQytetiStep(v.getText().toString())) {
-                    beforeTextChanged = false;
-                    verticalStepperForm.goToNextStep();
-                }
-                return false;
-            }
-        });
-
-        return qytetiEditText;
     }
 
     private View createTelefonStep() {
@@ -757,42 +758,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return adkontrolluesitEditText;
     }
 
-    private View createQytetiKontrolluesitStep() {
-        qytetiKontrolluesitEditText = new EditText(this);
-        qytetiKontrolluesitEditText.setSingleLine(true);
-        qytetiKontrolluesitEditText.setWidth(1000);
-        qytetiKontrolluesitEditText.setHint("Qyteti i Kontrolluesit");
-        qytetiKontrolluesitEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                beforeTextChanged = true;
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                beforeTextChanged = false;
-                checkQytetiKontrolluesitStep(s.toString());
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-        qytetiKontrolluesitEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (checkQytetiKontrolluesitStep(v.getText().toString())) {
-                    beforeTextChanged = false;
-                    verticalStepperForm.goToNextStep();
-                }
-                return false;
-            }
-        });
-
-        return qytetiKontrolluesitEditText;
-    }
-
     private View createAnkesaStep() {
         ankesaEditText = new EditText(this);
         ankesaEditText.setHint("Shkruani ankesën");
@@ -862,6 +827,12 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return kerkesaEditText;
     }
 
+
+                                                                    /* Check step methods
+                                                                       ↓↓↓↓↓↓↓↓↓↓
+
+                                                                    */
+
     private boolean checkNameStep(String emri) {
         boolean nameIsCorrect = false;
         if (!beforeTextChanged || nameEditText.getText().toString().length() > MIN_CHARACTERS_emri) {
@@ -881,12 +852,12 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         boolean emailIsCorrect = false;
 
 
-        if (email.length() >= 7 && beforeTextChanged) {
-            beforeTextChanged = false;
+        if (email.length() >= 7 && !beforeTextChanged) {
+            beforeTextChanged = true;
             if (email.contains("@") && email.length() >= 7) {
 
                 emailIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(1);
+                verticalStepperForm.setStepAsCompleted(EMAIL_STEP_NUM);
             } else {
                 String emailError = "Email-i nuk është i vlefshëm.";
                 verticalStepperForm.setActiveStepAsUncompleted(emailError);
@@ -901,7 +872,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             beforeTextChanged = true;
             if (adresa.length() >= 5) {
                 adresaIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(2);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String adresaError = "Adresa nuk është e vlefshme.";
                 verticalStepperForm.setActiveStepAsUncompleted(adresaError);
@@ -910,28 +881,13 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return adresaIsCorrect;
     }
 
-    private boolean checkQytetiStep(String qyteti) {
-        boolean qytetiIsCorrect = false;
-        if (!beforeTextChanged) {
-            beforeTextChanged = true;
-            if (qyteti.length() >= 3) {
-                qytetiIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(3);
-            } else {
-                String qytetiError = "Qyteti nuk është i vlefshëm.";
-                verticalStepperForm.setActiveStepAsUncompleted(qytetiError);
-            }
-        }
-        return qytetiIsCorrect;
-    }
-
     private boolean checkTelefoniStep(String telefoni) {
         boolean telefoniIsCorrect = false;
         if (!beforeTextChanged) {
             beforeTextChanged = true;
             if (telefoni.length() >= 3) {
                 telefoniIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(4);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String telefoniError = "Telefoni nuk është i vlefshëm.";
                 verticalStepperForm.setActiveStepAsUncompleted(telefoniError);
@@ -946,7 +902,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             beforeTextChanged = true;
             if (kontrolluesi.length() >= 4) {
                 kontrolluesiIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(5);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String telefoniError = "Kontrolluesi nuk është i vlefshëm.";
                 verticalStepperForm.setActiveStepAsUncompleted(telefoniError);
@@ -961,7 +917,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             beforeTextChanged = true;
             if (adKontrolluesit.length() >= 4) {
                 adKontrolluesiIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(6);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String telefoniError = "Adresa e kontrolluesit nuk është e vlefshme.";
                 verticalStepperForm.setActiveStepAsUncompleted(telefoniError);
@@ -970,28 +926,13 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return adKontrolluesiIsCorrect;
     }
 
-    private boolean checkQytetiKontrolluesitStep(String qytetiKontrolluesit) {
-        boolean qytetiKontrolluesitIsCorrect = false;
-        if (!beforeTextChanged) {
-            beforeTextChanged = true;
-            if (qytetiKontrolluesit.length() >= 4) {
-                qytetiKontrolluesitIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(7);
-            } else {
-                String telefoniError = "Qyteti i kontrolluesit nuk është i vlefshëm.";
-                verticalStepperForm.setActiveStepAsUncompleted(telefoniError);
-            }
-        }
-        return qytetiKontrolluesitIsCorrect;
-    }
-
     private boolean checkAnkesaStep(String ankesa) {
         boolean ankesaIsCorrect = false;
         if (!beforeTextChanged) {
             beforeTextChanged = true;
             if (ankesa.length() >= 4) {
                 ankesaIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(8);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String ankesaError = "Ankesa nuk është e vlefshme.";
                 verticalStepperForm.setActiveStepAsUncompleted(ankesaError);
@@ -1006,7 +947,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             beforeTextChanged = true;
             if (kerkesa.length() >= 4) {
                 kerkesaIsCorrect = true;
-                verticalStepperForm.setStepAsCompleted(9);
+                verticalStepperForm.setActiveStepAsCompleted();
             } else {
                 String ankesaError = "Kërkesa nuk është e vlefshme.";
                 verticalStepperForm.setActiveStepAsUncompleted(ankesaError);
@@ -1040,11 +981,45 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         }
     }
 
-    private void dismissDialog() {
-        if (progressDialog != null && progressDialog.isShowing()) {
-            progressDialog.dismiss();
+
+
+
+                                                                    /* Activity methods
+                                                                       ↓↓↓↓↓↓↓↓↓↓
+
+                                                                    */
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case Utilisation.REQUEST_GOOGLE_PLAY_SERVICES:
+                if (resultCode != RESULT_OK) {
+                    displayMessage("This app requires Google Play Services. Please install " +
+                            "Google Play Services on your device and relaunch this app.");
+                } else {
+                    getResultsFromApi();
+                }
+                break;
+            case Utilisation.REQUEST_ACCOUNT_PICKER:
+                if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
+                    String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                    if (accountName != null) {
+                        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = settings.edit();
+                        editor.putString(PREF_ACCOUNT_NAME, accountName);
+                        editor.apply();
+                        mCredential.setSelectedAccountName(accountName);
+                        getResultsFromApi();
+                    }
+                }
+                break;
+            case Utilisation.REQUEST_AUTHORIZATION:
+                if (resultCode == RESULT_OK) {
+                    getResultsFromApi();
+                }
+                break;
         }
-        progressDialog = null;
     }
 
     @Override
@@ -1084,11 +1059,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             savedInstanceState.putString(STATE_ADRESA, adresaEditText.getText().toString());
         }
 
-        // Saving qyteti field
-        if (qytetiEditText != null) {
-            savedInstanceState.putString(STATE_QYTETI, qytetiEditText.getText().toString());
-        }
-
         // Saving telefon field
         if (telefonEditText != null) {
             savedInstanceState.putString(STATE_TELEFON, telefonEditText.getText().toString());
@@ -1104,10 +1074,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             savedInstanceState.putString(STATE_ADKONTROLLUESIT, adkontrolluesitEditText.getText().toString());
         }
 
-        // Saving qytetiKontrolluesit field
-        if (qytetiKontrolluesitEditText != null) {
-            savedInstanceState.putString(STATE_QYTETIKONTROLLUESIT, qytetiKontrolluesitEditText.getText().toString());
-        }
 
         // Saving ankesa field
         if (ankesaEditText != null) {
@@ -1144,11 +1110,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             adresaEditText.setText(adresa);
         }
 
-        // Restoration of qyteti field
-        if (savedInstanceState.containsKey(STATE_QYTETI)) {
-            String qyteti = savedInstanceState.getString(STATE_QYTETI);
-            qytetiEditText.setText(qyteti);
-        }
 
         // Restoration of telefon field
         if (savedInstanceState.containsKey(STATE_TELEFON)) {
@@ -1166,12 +1127,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         if (savedInstanceState.containsKey(STATE_ADKONTROLLUESIT)) {
             String adKontrolluesit = savedInstanceState.getString(STATE_ADKONTROLLUESIT);
             adkontrolluesitEditText.setText(adKontrolluesit);
-        }
-
-        // Restoration of qytetiKontrolluesi field
-        if (savedInstanceState.containsKey(STATE_QYTETIKONTROLLUESIT)) {
-            String qytetiKontrolluesit = savedInstanceState.getString(STATE_QYTETIKONTROLLUESIT);
-            qytetiKontrolluesitEditText.setText(qytetiKontrolluesit);
         }
 
         // Restoration of ankesa field
@@ -1204,12 +1159,14 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String[] permissions,
-                                           int[] grantResults) {
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         if (requestCode == REQUEST_READWRITE_STORAGE) {
             if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 // finishCreationStep();
             }
+        }else if(requestCode == Utilisation.REQUEST_PERMISSION_GET_ACCOUNTS){
+            chooseAccount();
         }
     }
 
@@ -1217,53 +1174,204 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         Toast.makeText(BlankActivity.this, message, Toast.LENGTH_LONG).show();
     }
 
-}
 
-class SendEmailAsyncTask extends AsyncTask<Void, Void, Boolean> {
-    Mail m;
-    BlankActivity activity;
+                                                                    /* Gmail methods
+                                                                       ↓↓↓↓↓↓↓↓↓↓
 
-    SendEmailAsyncTask() {
-    }
+                                                                    */
 
-    @Override
-    protected Boolean doInBackground(Void... params) {
-        try {
-
-            if (activity.fileValidation.getFileValidated()) {
-                m.addAttachment(activity.selected.getAbsolutePath());
-            }
-            if (m.send()) {
-                displayMessageWithUi("Ankesa u dërgua me sukses.");
-                activity.finish();
-            } else {
-                displayMessageWithUi("Ankesa NUK u dërgua!");
-            }
-
-            return true;
-        } catch (AuthenticationFailedException e) {
-            Log.e(SendEmailAsyncTask.class.getName(), "Bad account details");
-            e.printStackTrace();
-            displayMessageWithUi("Email-i ose fjalëkalimi nuk është i saktë!");
-            return false;
-        } catch (MessagingException e) {
-            Log.e(SendEmailAsyncTask.class.getName(), "Email failed");
-            e.printStackTrace();
-            displayMessageWithUi("Email-i dështoi së dërguari.");
-            return false;
-        } catch (Exception e) {
-            e.printStackTrace();
-            displayMessageWithUi("Ndodhi një gabim i papritur.");
-            return false;
+    public void getResultsFromApi() {
+        if (!isGooglePlayServicesAvailable()) {
+            acquireGooglePlayServices();
+        } else if (mCredential.getSelectedAccountName() == null) {
+            chooseAccount();
+        } else if (!cS.isConnected()) {
+            displayMessage("Duhet të jeni i lidhur me internet");
+        } else {
+            email = new MakeRequestTask(mCredential);
+            email.bA = this;
+            email.execute();
         }
     }
 
-    private void displayMessageWithUi(final String message) {
-        activity.runOnUiThread(new Runnable() {
+    // Method for Checking Google Play Service is Available
+    public boolean isGooglePlayServicesAvailable() {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        return connectionStatusCode == ConnectionResult.SUCCESS;
+    }
+
+    // Method to Show Info, If Google Play Service is Not Available.
+    public void acquireGooglePlayServices() {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
+            showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
+        }
+    }
+
+    // Method for Google Play Services Error Info
+    void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode) {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        Dialog dialog = apiAvailability.getErrorDialog(
+                BlankActivity.this,
+                connectionStatusCode,
+                Utilisation.REQUEST_GOOGLE_PLAY_SERVICES);
+        dialog.show();
+    }
+
+    // Storing Mail ID using Shared Preferences
+    public void chooseAccount() {
+        if (Utilisation.checkPermission(getApplicationContext(), Manifest.permission.GET_ACCOUNTS)) {
+            String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
+            if (accountName != null) {
+                mCredential.setSelectedAccountName(accountName);
+                getResultsFromApi();
+            } else {
+                // Start a dialog from which the user can choose an account
+                startActivityForResult(mCredential.newChooseAccountIntent(), Utilisation.REQUEST_ACCOUNT_PICKER);
+            }
+        } else {
+            ActivityCompat.requestPermissions(BlankActivity.this,
+                    new String[]{Manifest.permission.GET_ACCOUNTS}, Utilisation.REQUEST_PERMISSION_GET_ACCOUNTS);
+        }
+    }
+
+}
+
+// Async Task for sending Mail using GMail OAuth
+ class MakeRequestTask extends AsyncTask<Void, Void, String> {
+    private com.google.api.services.gmail.Gmail mService = null;
+    private Exception mLastError = null;
+    BlankActivity bA;
+
+    MakeRequestTask(GoogleAccountCredential credential) {
+        HttpTransport transport = AndroidHttp.newCompatibleTransport();
+        JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+        mService = new com.google.api.services.gmail.Gmail.Builder(
+                transport, jsonFactory, credential)
+                .setApplicationName("Gmail send")
+                .build();
+    }
+
+    @Override
+    protected String doInBackground(Void... params) {
+        try {
+            return getDataFromApi();
+        } catch (Exception e) {
+            mLastError = e;
+            cancel(true);
+            return null;
+        }
+    }
+
+    private String getDataFromApi() throws IOException {
+        // getting Values for to Address, from Address, Subject and Body
+
+
+        String user = "me";
+        String to = "kristi_semi@outlook.com";
+        String from = bA.mCredential.getSelectedAccountName();
+        String subject = "Ankesë pë IDP";
+        String body = bA.bodyMessage;
+        MimeMessage mimeMessage;
+        String response = "";
+        try {
+            mimeMessage = createEmail(to, from, subject, body);
+            response = sendMessage(mService, user, mimeMessage);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    // Method to send email
+    private String sendMessage(Gmail service,
+                               String userId,
+                               MimeMessage email)
+            throws MessagingException, IOException {
+        Message message = createMessageWithEmail(email);
+        // GMail's official method to send email with oauth2.0
+        message = service.users().messages().send(userId, message).execute();
+
+        System.out.println("Message id: " + message.getId());
+        System.out.println(message.toPrettyString());
+        return message.getId();
+    }
+
+    // Method to create email Params
+    private MimeMessage createEmail(String to,
+                                    String from,
+                                    String subject,
+                                    String bodyText) throws MessagingException {
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+
+        MimeMessage email = new MimeMessage(session);
+        InternetAddress tAddress = new InternetAddress(to);
+        InternetAddress fAddress = new InternetAddress(from);
+
+        email.setFrom(fAddress);
+        email.addRecipient(javax.mail.Message.RecipientType.TO, tAddress);
+        email.setSubject(subject);
+        email.setText(bodyText);
+        return email;
+    }
+
+    private Message createMessageWithEmail(MimeMessage email)
+            throws MessagingException, IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        email.writeTo(bytes);
+        String encodedEmail = Base64.encodeBase64URLSafeString(bytes.toByteArray());
+        Message message = new Message();
+        message.setRaw(encodedEmail);
+        return message;
+    }
+
+
+
+    @Override
+    protected void onPostExecute(String output) {
+
+        if (output == null || output.length() == 0) {
+            displayMessageWithUi("No results returned.");
+        } else {
+            displayMessageWithUi(output);
+        }
+        bA.getDialog().dismiss();
+    }
+
+    @Override
+    protected void onCancelled() {
+
+        if (mLastError != null) {
+            if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
+               bA.showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError)
+                       .getConnectionStatusCode());
+            } else if (mLastError instanceof UserRecoverableAuthIOException) {
+                bA.startActivityForResult(
+                        ((UserRecoverableAuthIOException) mLastError).getIntent(),
+                        Utilisation.REQUEST_AUTHORIZATION);
+            } else {
+
+                displayMessageWithUi("The following error occurred:\n" + mLastError.getMessage());
+                Log.d("send email status: ", mLastError.getMessage());
+            }
+        } else {
+           displayMessageWithUi("Request Cancelled.");
+        }
+    }
+
+    private void displayMessageWithUi(final String message){
+
+        bA.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                activity.displayMessage(message);
+                Toast.makeText(bA.getApplicationContext(), message, Toast.LENGTH_LONG).show();
             }
         });
+
     }
 }
+
+

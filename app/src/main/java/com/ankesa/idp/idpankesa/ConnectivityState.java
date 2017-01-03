@@ -2,6 +2,7 @@ package com.ankesa.idp.idpankesa;
 
 
 import android.app.Activity;
+import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
@@ -14,7 +15,7 @@ import android.net.NetworkInfo;
     }
 
     boolean isConnected(){
-        ConnectivityManager cm = (ConnectivityManager) ac.getSystemService(ac.CONNECTIVITY_SERVICE);
+        ConnectivityManager cm = (ConnectivityManager) ac.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo nInfo = cm.getActiveNetworkInfo();
         return nInfo != null && nInfo.isConnected();
     }
