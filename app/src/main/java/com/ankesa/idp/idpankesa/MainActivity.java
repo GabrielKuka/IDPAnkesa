@@ -5,31 +5,20 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
 import com.github.fabtransitionactivity.SheetLayout;
-import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.common.api.GoogleApiClient;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SheetLayout.OnFabAnimationEndListener {
 
     private static final int REQUEST_CODE = 1;
-    GoogleSignInAccount account;
     private SheetLayout mSheetLayout;
 
 
-    //google api client
-    public GoogleApiClient mGoogleApiClient;
-    //Signin constant to check the activity result
-    private int RC_SIGN_IN = 100;
-    private boolean logInStatus = false;
-    GoogleSignInOptions gso;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,10 +46,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mSheetLayout.setFab(fab);
         mSheetLayout.setFabAnimationEndListener(this);
 
-//        GoogleLoginInBackground logIn = new GoogleLoginInBackground();
-//        logIn.mA = this;
-//        logIn.execute();
-
     }
 
 
@@ -86,14 +71,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onFabAnimationEnd() {
         Intent ankesa = new Intent(MainActivity.this, BlankActivity.class);
-        if (logInStatus) {
-            Log.d("logSts", "Login status: true");
-            ankesa.putExtra("NAME", account.getDisplayName());
-            ankesa.putExtra("EMAIL", account.getEmail());
-        }else{
-            Log.d("logSts", "Login status: false");
-        }
-
         startActivityForResult(ankesa, REQUEST_CODE);
     }
 
@@ -102,46 +79,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE) {
             mSheetLayout.contractFab();
-//        } else if (requestCode == RC_SIGN_IN) {
-//            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
-//            //Calling a new function to handle signin
-//            handleSignInResult(result);
-//        }
-        }
-    }
-//    //This function will option signing intent
-//    public void signIn() {
-//        //Creating an intent
-//        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
-//
-//        //Starting intent for result
-//        startActivityForResult(signInIntent, RC_SIGN_IN);
-//    }
-//
-//
-//    //After the signing we are calling this function
-//    private void handleSignInResult(GoogleSignInResult result) {
-//        //If the login succeed
-//        if (result.isSuccess()) {
-//            //Getting google account
-//            account = result.getSignInAccount();
-//
-//            //Displaying name and email
-////            textViewName.setText(acct.getDisplayName());
-////            textViewEmail.setText(acct.getEmail());
-//            logInStatus = true;
-//        } else {
-//            //If login fails
-//            logInStatus = false;
-//            Toast.makeText(this, "Login Failed", Toast.LENGTH_LONG).show();
-//        }
-//    }
+       }
+   }
 
-
-//    @Override
-//    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-//
-//    }
 
     @Override
     public void onClick(View v) {
@@ -155,34 +95,3 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
 }
-
-//class GoogleLoginInBackground extends AsyncTask<Void, Void, Boolean>{
-//
-//    MainActivity mA;
-//
-//    GoogleLoginInBackground(){}
-//
-//    @Override
-//    protected Boolean doInBackground(Void... params){
-//
-//        try{
-//            mA.gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-//                    .requestEmail()
-//                    .build();
-//
-//            mA.mGoogleApiClient = new GoogleApiClient.Builder(mA)
-//                    .enableAutoManage(mA /* FragmentActivity */, mA /* OnConnectionFailedListener */)
-//                    .addApi(Auth.GOOGLE_SIGN_IN_API, mA.gso)
-//                    .build();
-//
-//            mA.signIn();
-//        }catch(Exception e){
-//            e.printStackTrace();
-//        }
-//
-//        return true;
-//    }
-//
-//
-//
-//}

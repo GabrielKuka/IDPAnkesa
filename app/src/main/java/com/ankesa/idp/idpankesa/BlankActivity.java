@@ -58,55 +58,54 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 import ernestoyaquello.com.verticalstepperform.VerticalStepperFormLayout;
 import ernestoyaquello.com.verticalstepperform.fragments.BackConfirmationFragment;
 import ernestoyaquello.com.verticalstepperform.interfaces.VerticalStepperForm;
 
 import static android.R.id.message;
-
+import static com.ankesa.idp.idpankesa.Utilisation.ADKONTROLLUESIT_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.ADRESA_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.ANKESA_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.CAPTCHA_DIALOG;
+import static com.ankesa.idp.idpankesa.Utilisation.EMAIL_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.FILE_MANAGER_DIALOG_ID;
+import static com.ankesa.idp.idpankesa.Utilisation.KERKESA_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.KONTROLLUESI_STEP_NUM;
+import static com.ankesa.idp.idpankesa.Utilisation.MIN_CHARACTERS_emri;
+import static com.ankesa.idp.idpankesa.Utilisation.REQUEST_READWRITE_STORAGE;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_ADKONTROLLUESIT;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_ADRESA;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_ANKESA;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_EMAIL;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_KERKESA;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_KONTROLLUESI;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_NAME;
+import static com.ankesa.idp.idpankesa.Utilisation.STATE_TELEFON;
+import static com.ankesa.idp.idpankesa.Utilisation.TELEFON_STEP_NUM;
 
 public class BlankActivity extends AppCompatActivity implements VerticalStepperForm {
 
-    public static final String STATE_NAME = "Name";
-    public static final String STATE_EMAIL = "Email";
-    public static final String STATE_ADRESA = "Adresa";
-    public static final String STATE_TELEFON = "Telefoni";
-    public static final String STATE_KONTROLLUESI = "Kontrolluesi";
-    public static final String STATE_ADKONTROLLUESIT = "Adresa e Kontrolluesit";
-    public static final String STATE_ANKESA = "Ankesa e qytetarit";
-    public static final String STATE_KERKESA = "Kerkesa e qytetarit";
 
-
-    static final int FILE_MANAGER_DIALOG_ID = 1998;
-    private static final int NAME_STEP_NUM = 0;
-    private static final int EMAIL_STEP_NUM = 1;
-    private static final int ADRESA_STEP_NUM = 2;
-    private static final int TELEFON_STEP_NUM = 3;
-    private static final int KONTROLLUESI_STEP_NUM = 4;
-    private static final int ADKONTROLLUESIT_STEP_NUM = 5;
-    private static final int ANKESA_STEP_NUM = 6;
-    private static final int KERKESA_STEP_NUM = 7;
-    private static final int MIN_CHARACTERS_emri = 5;
-    private static final int PASSWORD_DIALOG = 123456;
-    private static final int CAPTCHA_DIALOG = 123456789;
-    public Model[] modelItems;
-    public File root, curFolder, selected;
-    ImageView fileManagerBackButton;
-    TextView currentPathText;
-    ListView dialogListView;
-    Dialog dialog;
-    FileValidation fileValidation;
-
-    EmailPassword emailPassword;
-    private boolean confirmBack = true;
-    private ProgressDialog progressDialog;
-    private boolean beforeTextChanged = true;
-
+    private static final String PREF_ACCOUNT_NAME = "accountName";
+    private static final String[] SCOPES = {
+            GmailScopes.GMAIL_LABELS,
+            GmailScopes.GMAIL_COMPOSE,
+            GmailScopes.GMAIL_INSERT,
+            GmailScopes.GMAIL_MODIFY,
+            GmailScopes.GMAIL_READONLY,
+            GmailScopes.MAIL_GOOGLE_COM
+    };
     //qytetari
     public EditText nameEditText;
     public EditText emailEditText;
@@ -117,11 +116,24 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     public EditText adkontrolluesitEditText;
     public EditText ankesaEditText;
     public EditText kerkesaEditText;
-
+    public GoogleAccountCredential mCredential;
+    Model[] modelItems;
+    File root, curFolder, selected;
+    ImageView fileManagerBackButton;
+    TextView currentPathText;
+    ListView dialogListView;
+    Dialog dialog;
+    FileValidation fileValidation;
+    EmailPassword emailPassword;
+    String bodyMessage;
+    MakeRequestTask email;
+    ConnectivityState cS;
+    private boolean confirmBack = true;
+    private ProgressDialog progressDialog;
+    private boolean beforeTextChanged = true;
     private VerticalStepperFormLayout verticalStepperForm;
     private List<String> fileList = new ArrayList<>();
     private boolean[] fileTypes;
-    private int REQUEST_READWRITE_STORAGE = 1997;
     private String nameExtra, emailExtra;
     private Button buttonOpenDialog;
     private EditText password;
@@ -129,24 +141,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     private Captcha c;
     private ImageView captchaImage;
 
-    String bodyMessage;
-
-    MakeRequestTask email;
-
-    public GoogleAccountCredential mCredential;
-    private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = {
-            GmailScopes.GMAIL_LABELS,
-            GmailScopes.GMAIL_COMPOSE,
-            GmailScopes.GMAIL_INSERT,
-            GmailScopes.GMAIL_MODIFY,
-            GmailScopes.GMAIL_READONLY,
-            GmailScopes.MAIL_GOOGLE_COM
-    };
-
-    ConnectivityState cS;
-
-    public BlankActivity(){}
+    public BlankActivity() {
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -197,6 +193,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 .displayBottomNavigation(true)
                 .showVerticalLineWhenStepsAreCollapsed(true)
                 .init();
+
+        getResultsFromApi();
 
     }
 
@@ -268,11 +266,9 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     }
 
 
-
-
-                                                                    /* Dialog methods
-                                                                       ↓↓↓↓↓↓↓↓↓↓
-                                                                    */
+    /* Dialog methods
+       ↓↓↓↓↓↓↓↓↓↓
+    */
     @Override
     protected Dialog onCreateDialog(int id) {
 
@@ -304,7 +300,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                         if (selected.isDirectory()) {
                             ListFolders(selected);
                         } else {
-
                             validateFileSelected(selected);
                             getDialog().dismiss();
                         }
@@ -312,7 +307,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 });
 
                 break;
-            case PASSWORD_DIALOG:
+            case Utilisation.PASSWORD_DIALOG:
                 dialog = new Dialog(BlankActivity.this);
                 dialog.setContentView(R.layout.password_dialog_layout);
                 dialog.setCancelable(false);
@@ -352,6 +347,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                     public void onClick(View v) {
                         if (captchaAnswer.getText().toString().equals(c.answer)) {
                             executeDataSending();
+                            getDialog().dismiss();
+                            finish();
                         } else {
                             displayMessage("Gabim!");
                             captchaAnswer.setText("");
@@ -461,6 +458,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 }
             }).start();
         }
+
     }
 
 
@@ -475,28 +473,28 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     public View createStepContentView(int stepNumber) {
         View view = null;
         switch (stepNumber) {
-            case NAME_STEP_NUM:
+            case Utilisation.NAME_STEP_NUM:
                 view = createNameStep();
                 break;
-            case EMAIL_STEP_NUM:
+            case Utilisation.EMAIL_STEP_NUM:
                 view = createEmailStep();
                 break;
-            case ADRESA_STEP_NUM:
+            case Utilisation.ADRESA_STEP_NUM:
                 view = createAdresaStep();
                 break;
-            case TELEFON_STEP_NUM:
+            case Utilisation.TELEFON_STEP_NUM:
                 view = createTelefonStep();
                 break;
-            case KONTROLLUESI_STEP_NUM:
+            case Utilisation.KONTROLLUESI_STEP_NUM:
                 view = createKontrolluesiStep();
                 break;
-            case ADKONTROLLUESIT_STEP_NUM:
+            case Utilisation.ADKONTROLLUESIT_STEP_NUM:
                 view = createADKontrolluesiStep();
                 break;
-            case ANKESA_STEP_NUM:
+            case Utilisation.ANKESA_STEP_NUM:
                 view = createAnkesaStep();
                 break;
-            case KERKESA_STEP_NUM:
+            case Utilisation.KERKESA_STEP_NUM:
                 view = createKerkesaStep();
                 break;
         }
@@ -506,29 +504,29 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     @Override
     public void onStepOpening(int stepNumber) {
         switch (stepNumber) {
-            case NAME_STEP_NUM:
-                checkNameStep(nameEditText.getText().toString());
+            case Utilisation.NAME_STEP_NUM:
+                checkNameStep(Utilisation.getString(nameEditText));
                 break;
             case EMAIL_STEP_NUM:
-                checkEmailStep(emailEditText.getText().toString());
+                checkEmailStep(Utilisation.getString(emailEditText));
                 break;
             case ADRESA_STEP_NUM:
-                checkAdresaStep(adresaEditText.getText().toString());
+                checkAdresaStep(Utilisation.getString(adresaEditText));
                 break;
             case TELEFON_STEP_NUM:
-                checkTelefoniStep(telefonEditText.getText().toString());
+                checkTelefoniStep(Utilisation.getString(telefonEditText));
                 break;
             case KONTROLLUESI_STEP_NUM:
-                checkKontrolluesiStep(kontrolluesiEditText.getText().toString());
+                checkKontrolluesiStep(Utilisation.getString(kontrolluesiEditText));
                 break;
             case ADKONTROLLUESIT_STEP_NUM:
-                checkAdKontrolluesiStep(adkontrolluesitEditText.getText().toString());
+                checkAdKontrolluesiStep(Utilisation.getString(adkontrolluesitEditText));
                 break;
             case ANKESA_STEP_NUM:
-                checkAnkesaStep(ankesaEditText.getText().toString());
+                checkAnkesaStep(Utilisation.getString(ankesaEditText));
                 break;
             case KERKESA_STEP_NUM:
-                checkKerkesaStep(kerkesaEditText.getText().toString());
+                checkKerkesaStep(Utilisation.getString(kerkesaEditText));
                 break;
         }
     }
@@ -542,7 +540,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-                    beforeTextChanged = true;
+                beforeTextChanged = true;
 
             }
 
@@ -581,7 +579,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         emailEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    beforeTextChanged = true;
+                beforeTextChanged = true;
             }
 
             @Override
@@ -835,7 +833,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
 
     private boolean checkNameStep(String emri) {
         boolean nameIsCorrect = false;
-        if (!beforeTextChanged || nameEditText.getText().toString().length() > MIN_CHARACTERS_emri) {
+        if (!beforeTextChanged || Utilisation.getString(nameEditText).length() > MIN_CHARACTERS_emri) {
             beforeTextChanged = true;
             if (emri.length() >= MIN_CHARACTERS_emri) {
                 nameIsCorrect = true;
@@ -995,8 +993,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         switch (requestCode) {
             case Utilisation.REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    displayMessage("This app requires Google Play Services. Please install " +
-                            "Google Play Services on your device and relaunch this app.");
+                    displayMessage("Ky aplikacion kërkon 'Google Play Service' për të mirëfunksionuar. Ju lutemi instaloni këtë program dhe më pas procedoni.");
                 } else {
                     getResultsFromApi();
                 }
@@ -1039,8 +1036,10 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         dismissDialog();
     }
 
-    // SAVING AND RESTORING THE STATE
+                                                            /* Saving and restoring values methods
+                                                               ↓↓↓↓↓↓↓↓↓↓
 
+                                                            */
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
 
@@ -1165,7 +1164,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 // finishCreationStep();
             }
-        }else if(requestCode == Utilisation.REQUEST_PERMISSION_GET_ACCOUNTS){
+        } else if (requestCode == Utilisation.REQUEST_PERMISSION_GET_ACCOUNTS) {
             chooseAccount();
         }
     }
@@ -1187,7 +1186,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             chooseAccount();
         } else if (!cS.isConnected()) {
             displayMessage("Duhet të jeni i lidhur me internet");
-        } else {
+        } else if(Utilisation.isNotEmpty(emailEditText)) {
             email = new MakeRequestTask(mCredential);
             email.bA = this;
             email.execute();
@@ -1240,10 +1239,10 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
 }
 
 // Async Task for sending Mail using GMail OAuth
- class MakeRequestTask extends AsyncTask<Void, Void, String> {
+class MakeRequestTask extends AsyncTask<Void, Void, String> {
+    BlankActivity bA;
     private com.google.api.services.gmail.Gmail mService = null;
     private Exception mLastError = null;
-    BlankActivity bA;
 
     MakeRequestTask(GoogleAccountCredential credential) {
         HttpTransport transport = AndroidHttp.newCompatibleTransport();
@@ -1268,16 +1267,22 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     private String getDataFromApi() throws IOException {
         // getting Values for to Address, from Address, Subject and Body
 
-
         String user = "me";
         String to = "kristi_semi@outlook.com";
         String from = bA.mCredential.getSelectedAccountName();
-        String subject = "Ankesë pë IDP";
+        String subject = "Ankesë për IDP";
         String body = bA.bodyMessage;
         MimeMessage mimeMessage;
         String response = "";
         try {
-            mimeMessage = createEmail(to, from, subject, body);
+            if(bA.fileValidation.getFileValidated()){
+                displayMessageWithUi("File is attached");
+
+                mimeMessage = createEmailWithAttachment(to, from, subject, body, bA.selected);
+            }else{
+                displayMessageWithUi("File is attached");
+                mimeMessage = createEmail(to, from, subject, body);
+            }
             response = sendMessage(mService, user, mimeMessage);
         } catch (MessagingException e) {
             e.printStackTrace();
@@ -1318,6 +1323,40 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         return email;
     }
 
+    private static MimeMessage createEmailWithAttachment(String to,
+                                                        String from,
+                                                        String subject,
+                                                        String bodyText,
+                                                        File file)
+            throws MessagingException, IOException {
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+
+        MimeMessage email = new MimeMessage(session);
+
+        email.setFrom(new InternetAddress(from));
+        email.addRecipient(javax.mail.Message.RecipientType.TO,
+                new InternetAddress(to));
+        email.setSubject(subject);
+
+        MimeBodyPart mimeBodyPart = new MimeBodyPart();
+        mimeBodyPart.setContent(bodyText, "text/plain");
+
+        Multipart multipart = new MimeMultipart();
+        multipart.addBodyPart(mimeBodyPart);
+
+        mimeBodyPart = new MimeBodyPart();
+        DataSource source = new FileDataSource(file);
+
+        mimeBodyPart.setDataHandler(new DataHandler(source));
+        mimeBodyPart.setFileName(file.getName());
+
+        multipart.addBodyPart(mimeBodyPart);
+        email.setContent(multipart);
+
+        return email;
+    }
+
     private Message createMessageWithEmail(MimeMessage email)
             throws MessagingException, IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -1327,7 +1366,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         message.setRaw(encodedEmail);
         return message;
     }
-
 
 
     @Override
@@ -1346,8 +1384,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
 
         if (mLastError != null) {
             if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
-               bA.showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError)
-                       .getConnectionStatusCode());
+                bA.showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError)
+                        .getConnectionStatusCode());
             } else if (mLastError instanceof UserRecoverableAuthIOException) {
                 bA.startActivityForResult(
                         ((UserRecoverableAuthIOException) mLastError).getIntent(),
@@ -1358,11 +1396,11 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 Log.d("send email status: ", mLastError.getMessage());
             }
         } else {
-           displayMessageWithUi("Request Cancelled.");
+            displayMessageWithUi("Request Cancelled.");
         }
     }
 
-    private void displayMessageWithUi(final String message){
+    private void displayMessageWithUi(final String message) {
 
         bA.runOnUiThread(new Runnable() {
             @Override

@@ -4,13 +4,13 @@ package com.ankesa.idp.idpankesa;
 
 class FileValidation {
 
-    private boolean isFileValidated = false;
+    private  boolean isFileValidated = false;
 
     FileValidation(boolean v) {
         isFileValidated = v;
     }
 
-    boolean getFileValidated() {
+     boolean getFileValidated() {
         return isFileValidated;
     }
 
