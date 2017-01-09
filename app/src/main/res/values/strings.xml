@@ -13,4 +13,6 @@
     <string name="ok">Vazhdo</string>
     <string name="passDialogTitle">Vendos fjalëkalmin e email-it</string>
     <string name="captchatitle">Plotëso</string>
+    <string name="info">Me anë të aplikacionit IDP Ankesa çdo përdorues ka mundësi për të dërguar një ankesë  drejt Komisionerit Për Të Drejtën e Informimit dhe Mbrojtjen e të Dhënave Personale.
+        Për të kryer ankesën çdokush duhet të plotësoj formularin me të dhënat bazë të tij si dhe ankesën që do bëj.</string>
 </resources>

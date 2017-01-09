@@ -11,26 +11,18 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.github.fabtransitionactivity.SheetLayout;
+import com.wajahatkarim3.easyflipview.EasyFlipView;
 
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, SheetLayout.OnFabAnimationEndListener {
 
     private static final int REQUEST_CODE = 1;
     private SheetLayout mSheetLayout;
-
+    private EasyFlipView flipView;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try{Thread.sleep(300);}catch(Exception e){
-                    e.printStackTrace();
-                }
-            }
-        }).start();
 
         setTheme(R.style.AppTheme_NoActionBar); // <- Sets the default theme of the application
         super.onCreate(savedInstanceState);
@@ -39,6 +31,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        flipView = (EasyFlipView) findViewById(R.id.flipViewId);
+        flipView.setFlipDuration(1000);
+        flipView.setFlipEnabled(true);
+        flipView.setFlipOnTouch(true);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(this);
@@ -79,19 +75,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE) {
             mSheetLayout.contractFab();
-       }
-   }
-
+        }
+    }
 
     @Override
     public void onClick(View v) {
+
         ConnectivityState connectivityState = new ConnectivityState(this);
-        if(connectivityState.isConnected())
+        if (connectivityState.isConnected())
             mSheetLayout.expandFab();
         else
             Toast.makeText(getApplicationContext(), "Duhet të jeni i lidhur në internet për të bërë një ankesë.", Toast.LENGTH_LONG).show();
 
+
     }
 
+    public void flipView(View view){
+        flipView.flipTheView();
+    }
 
 }

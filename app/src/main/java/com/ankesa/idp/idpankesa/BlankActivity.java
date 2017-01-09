@@ -73,7 +73,6 @@ import ernestoyaquello.com.verticalstepperform.VerticalStepperFormLayout;
 import ernestoyaquello.com.verticalstepperform.fragments.BackConfirmationFragment;
 import ernestoyaquello.com.verticalstepperform.interfaces.VerticalStepperForm;
 
-import static android.R.id.message;
 import static com.ankesa.idp.idpankesa.Utilisation.ADKONTROLLUESIT_STEP_NUM;
 import static com.ankesa.idp.idpankesa.Utilisation.ADRESA_STEP_NUM;
 import static com.ankesa.idp.idpankesa.Utilisation.ANKESA_STEP_NUM;
@@ -134,7 +133,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     private VerticalStepperFormLayout verticalStepperForm;
     private List<String> fileList = new ArrayList<>();
     private boolean[] fileTypes;
-    private String nameExtra, emailExtra;
     private Button buttonOpenDialog;
     private EditText password;
     private EditText captchaAnswer;
@@ -150,13 +148,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         setContentView(R.layout.activity_blank);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-
-//        Bundle extras = getIntent().getExtras();
-//        if (extras != null) {
-//            nameExtra = extras.getString("NAME");
-//            emailExtra = extras.getString("EMAIL");
-//        }
 
         permissionCheckForMarshmallow(); // <- Grants run-time permission (for marshmallow)
 
@@ -182,6 +173,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         emailPassword = new EmailPassword();
 
         String[] stepTitles = {"Emri dhe mbiemri", "Email-i", "Adresa", "Telefoni", "Kontrolluesi publik ose privat", "Adresa e kontrolluesit", "Ankesa", "Kërkesa"};
+        String[] subtitles = {"P.sh: Filan Fisteku", "P.sh: f.fisteku@example.com","P.sh: Rr. 'Sali Butka', Tiranë","P.sh: 0698567597","P.Sh: Gabriel Kuka","","",""};
         int colorPrimary = ContextCompat.getColor(getApplicationContext(), R.color.colorPrimary);
         int colorPrimaryDark = ContextCompat.getColor(getApplicationContext(), R.color.colorPrimaryDark);
 
@@ -192,9 +184,11 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                 .primaryDarkColor(colorPrimaryDark)
                 .displayBottomNavigation(true)
                 .showVerticalLineWhenStepsAreCollapsed(true)
+                .stepsSubtitles(subtitles)
                 .init();
 
-        getResultsFromApi();
+        // getResultsFromApi();
+        chooseAccount();
 
     }
 
@@ -407,7 +401,6 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
     }
 
     private void executeDataSending() {
-        Log.d("Email-i: ", emailEditText.getText().toString());
         final String CC = emailEditText.getText().toString();
         //final String subject = "Ankesë për IDP";
         bodyMessage = "Emri/Mbiemri: " + nameEditText.getText().toString() + System.lineSeparator() + "Adresa: " + adresaEditText.getText().toString() + System.lineSeparator()
@@ -438,18 +431,19 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                         intent.setData(Uri.parse("mailto:" + "kristi_semi@outlook.com"));
                         intent.putExtra(Intent.EXTRA_CC, CC);
                         intent.putExtra(Intent.EXTRA_SUBJECT, "Ankesë për IDP");
-                        intent.putExtra(Intent.EXTRA_TEXT, message);
+                        intent.putExtra(Intent.EXTRA_TEXT, bodyMessage);
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        if (fileValidation.getFileValidated()) {
+                            intent.putExtra(Intent.EXTRA_STREAM, Uri.parse(selected.toString()));
+                        }
 
                         try {
                             startActivity(Intent.createChooser(intent, "Send mail...."));
-                            // You must set confirmBack to false before calling finish() to avoid the confirmation dialog
+                            Toast.makeText(getApplicationContext(), "Ankesa u dërgua.", Toast.LENGTH_LONG).show();
                             confirmBack = false;
                             finish();
                         } catch (android.content.ActivityNotFoundException ex) {
-                            Toast.makeText(BlankActivity.this,
-                                    "There is no email client installed.", Toast.LENGTH_SHORT).show();
-
+                            Toast.makeText(getApplicationContext(), "Duhet të instaloni të paktën një program që proceson Email-et tuaja.", Toast.LENGTH_LONG).show();
                         }
 
                     } catch (InterruptedException e) {
@@ -1007,6 +1001,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
                         editor.apply();
                         mCredential.setSelectedAccountName(accountName);
+                        emailEditText.setText(mCredential.getSelectedAccountName());
+
                         getResultsFromApi();
                     }
                 }
@@ -1036,10 +1032,10 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
         dismissDialog();
     }
 
-                                                            /* Saving and restoring values methods
-                                                               ↓↓↓↓↓↓↓↓↓↓
+    /* Saving and restoring values methods
+       ↓↓↓↓↓↓↓↓↓↓
 
-                                                            */
+    */
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
 
@@ -1186,7 +1182,7 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             chooseAccount();
         } else if (!cS.isConnected()) {
             displayMessage("Duhet të jeni i lidhur me internet");
-        } else if(Utilisation.isNotEmpty(emailEditText)) {
+        } else if (Utilisation.isNotEmpty(emailEditText) && Utilisation.isNotEmpty(telefonEditText)) {
             email = new MakeRequestTask(mCredential);
             email.bA = this;
             email.execute();
@@ -1225,6 +1221,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
             String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
                 mCredential.setSelectedAccountName(accountName);
+                emailEditText.setText(mCredential.getSelectedAccountName());
+
                 getResultsFromApi();
             } else {
                 // Start a dialog from which the user can choose an account
@@ -1238,7 +1236,8 @@ public class BlankActivity extends AppCompatActivity implements VerticalStepperF
 
 }
 
-// Async Task for sending Mail using GMail OAuth
+                                                    // Async Task for sending Mail using GMail OAuth
+
 class MakeRequestTask extends AsyncTask<Void, Void, String> {
     BlankActivity bA;
     private com.google.api.services.gmail.Gmail mService = null;
@@ -1249,85 +1248,15 @@ class MakeRequestTask extends AsyncTask<Void, Void, String> {
         JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
         mService = new com.google.api.services.gmail.Gmail.Builder(
                 transport, jsonFactory, credential)
-                .setApplicationName("Gmail send")
+                .setApplicationName("IDP Ankesa")
                 .build();
     }
 
-    @Override
-    protected String doInBackground(Void... params) {
-        try {
-            return getDataFromApi();
-        } catch (Exception e) {
-            mLastError = e;
-            cancel(true);
-            return null;
-        }
-    }
-
-    private String getDataFromApi() throws IOException {
-        // getting Values for to Address, from Address, Subject and Body
-
-        String user = "me";
-        String to = "kristi_semi@outlook.com";
-        String from = bA.mCredential.getSelectedAccountName();
-        String subject = "Ankesë për IDP";
-        String body = bA.bodyMessage;
-        MimeMessage mimeMessage;
-        String response = "";
-        try {
-            if(bA.fileValidation.getFileValidated()){
-                displayMessageWithUi("File is attached");
-
-                mimeMessage = createEmailWithAttachment(to, from, subject, body, bA.selected);
-            }else{
-                displayMessageWithUi("File is attached");
-                mimeMessage = createEmail(to, from, subject, body);
-            }
-            response = sendMessage(mService, user, mimeMessage);
-        } catch (MessagingException e) {
-            e.printStackTrace();
-        }
-        return response;
-    }
-
-    // Method to send email
-    private String sendMessage(Gmail service,
-                               String userId,
-                               MimeMessage email)
-            throws MessagingException, IOException {
-        Message message = createMessageWithEmail(email);
-        // GMail's official method to send email with oauth2.0
-        message = service.users().messages().send(userId, message).execute();
-
-        System.out.println("Message id: " + message.getId());
-        System.out.println(message.toPrettyString());
-        return message.getId();
-    }
-
-    // Method to create email Params
-    private MimeMessage createEmail(String to,
-                                    String from,
-                                    String subject,
-                                    String bodyText) throws MessagingException {
-        Properties props = new Properties();
-        Session session = Session.getDefaultInstance(props, null);
-
-        MimeMessage email = new MimeMessage(session);
-        InternetAddress tAddress = new InternetAddress(to);
-        InternetAddress fAddress = new InternetAddress(from);
-
-        email.setFrom(fAddress);
-        email.addRecipient(javax.mail.Message.RecipientType.TO, tAddress);
-        email.setSubject(subject);
-        email.setText(bodyText);
-        return email;
-    }
-
     private static MimeMessage createEmailWithAttachment(String to,
-                                                        String from,
-                                                        String subject,
-                                                        String bodyText,
-                                                        File file)
+                                                         String from,
+                                                         String subject,
+                                                         String bodyText,
+                                                         File file)
             throws MessagingException, IOException {
         Properties props = new Properties();
         Session session = Session.getDefaultInstance(props, null);
@@ -1354,6 +1283,79 @@ class MakeRequestTask extends AsyncTask<Void, Void, String> {
         multipart.addBodyPart(mimeBodyPart);
         email.setContent(multipart);
 
+        return email;
+    }
+
+    @Override
+    protected String doInBackground(Void... params) {
+        try {
+            return getDataFromApi();
+        } catch (Exception e) {
+            mLastError = e;
+            cancel(true);
+            return null;
+        }
+    }
+
+    @Override
+    protected void onPreExecute(){
+
+    }
+
+    private String getDataFromApi() throws IOException {
+        // getting Values for to Address, from Address, Subject and Body
+
+        String user = "me";
+        String to = "kristi_semi@outlook.com";
+        String from = bA.mCredential.getSelectedAccountName();
+        String subject = "Ankesë për IDP";
+        String body = bA.bodyMessage;
+        MimeMessage mimeMessage;
+        String response = "";
+        try {
+            if (bA.fileValidation.getFileValidated()) {
+                mimeMessage = createEmailWithAttachment(to, from, subject, body, bA.selected);
+            } else {
+                mimeMessage = createEmail(to, from, subject, body);
+            }
+            response = sendMessage(mService, user, mimeMessage);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+
+        return response;
+    }
+
+    // Method to send email
+    private String sendMessage(Gmail service,
+                               String userId,
+                               MimeMessage email)
+            throws MessagingException, IOException {
+        Message message = createMessageWithEmail(email);
+        // GMail's official method to send email with oauth2.0
+        message = service.users().messages().send(userId, message).execute();
+
+        System.out.println("Message id: " + message.getId());
+        System.out.println(message.toPrettyString());
+        return "Ankesa u dërgua.";
+    }
+
+    // Method to create email Params
+    private MimeMessage createEmail(String to,
+                                    String from,
+                                    String subject,
+                                    String bodyText) throws MessagingException {
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+
+        MimeMessage email = new MimeMessage(session);
+        InternetAddress tAddress = new InternetAddress(to);
+        InternetAddress fAddress = new InternetAddress(from);
+
+        email.setFrom(fAddress);
+        email.addRecipient(javax.mail.Message.RecipientType.TO, tAddress);
+        email.setSubject(subject);
+        email.setText(bodyText);
         return email;
     }
 

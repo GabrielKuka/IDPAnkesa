@@ -9,26 +9,29 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="#fff"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.ankesa.idp.idpankesa.MainActivity"
     tools:showIn="@layout/activity_main">
 
 
+    <com.wajahatkarim3.easyflipview.EasyFlipView
+        android:id="@+id/flipViewId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:flipOnTouch="true"
+        app:flipEnabled="true"
+        app:flipDuration="400">
 
-    <ImageView
-        android:id="@+id/fotoKryesore"
-        android:layout_width="wrap_content"
-        android:layout_height="150dp"
-        android:src="@drawable/foto_kryesore"
-        />
+        <!-- Back Layout Goes Here -->
+        <include layout="@layout/flash_card_layout_back"/>
 
-    <ImageView
-        android:id="@+id/stemaId"
-        android:layout_width="wrap_content"
-        android:layout_height="150dp"
-        android:src="@drawable/stema"
+        <!-- Front Layout Goes Here -->
+        <include layout="@layout/flash_card_layout_front"/>
 
-        android:layout_below="@+id/fotoKryesore"
-        android:layout_centerHorizontal="true" />
+    </com.wajahatkarim3.easyflipview.EasyFlipView>
+
+
+
 
 </RelativeLayout>

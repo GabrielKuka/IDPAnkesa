@@ -27,8 +27,8 @@ public class RrethNesh extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         collapsingToolbarLayout = (CollapsingToolbarLayout) findViewById(R.id.collapsingToolbarLayout);
-        collapsingToolbarLayout.setCollapsedTitleTextColor(getResources().getColor(R.color.black));
-        collapsingToolbarLayout.setExpandedTitleColor(getResources().getColor(R.color.black));
+        collapsingToolbarLayout.setCollapsedTitleTextColor(getResources().getColor(R.color.white));
+        collapsingToolbarLayout.setExpandedTitleColor(getResources().getColor(R.color.white));
         appBarLayout = (ScrollableAppBar) findViewById(R.id.appbar);
         if (appBarLayout != null)
             appBarLayout.collapseToolbar();
