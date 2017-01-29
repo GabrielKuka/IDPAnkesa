@@ -15,4 +15,11 @@
     <string name="captchatitle">Plotëso</string>
     <string name="info">Me anë të aplikacionit IDP Ankesa çdo përdorues ka mundësi për të dërguar një ankesë  drejt Komisionerit Për Të Drejtën e Informimit dhe Mbrojtjen e të Dhënave Personale.
         Për të kryer ankesën çdokush duhet të plotësoj formularin me të dhënat bazë të tij si dhe ankesën që do bëj.</string>
+    <string name="fifthElOfAbout">www.idp.al</string>
+    <string name="phonePick">Zgjidh nga celulari</string>
+    <string name="shootPhoto">Bëj foto</string>
+    <string name="drawSignature">Vizato firmën tënde</string>
+    <string name="sqarime">Komisioneri për të Drejtën e Informimit dhe Mbrojtjen e të Dhënave Personale, me marrjen e një ankese, i kërkon ankuesit dhe organit publik kundër të cilit është bërë ankesa, të paraqesin parashtrime me shkrim brenda 10 ditësh. Kur e sheh të përshtatshme Komisioneri organizon një seancë dëgjimore publike me pjesëmarrjen e palëve.</string>
+    <string name="clear">Fshije</string>
+    <string name="save">Ruaje</string>
 </resources>

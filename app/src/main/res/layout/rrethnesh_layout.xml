@@ -53,10 +53,37 @@
             android:orientation="vertical"
             android:paddingTop="16dp">
 
+            <android.support.v7.widget.CardView
+                android:layout_width="match_parent"
+                android:onClick="launchWebsite"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:id="@+id/websiteId"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/website" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="60dp"
+                        android:layout_marginTop="5dp"
+                        android:padding="7dp"
+                        android:text="@string/fifthElOfAbout" />
+                </RelativeLayout>
+            </android.support.v7.widget.CardView>
 
             <android.support.v7.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:onClick="complain"
                 android:layout_margin="16dp">
 
                 <RelativeLayout
@@ -83,6 +110,7 @@
             <android.support.v7.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:onClick="callIDP"
                 android:layout_margin="16dp">
 
                 <RelativeLayout

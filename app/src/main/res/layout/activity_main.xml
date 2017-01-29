@@ -23,24 +23,24 @@
 
     <include layout="@layout/content_main" />
 
-    <android.support.design.widget.FloatingActionButton
+    <com.melnykov.fab.FloatingActionButton
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center"
-        android:layout_marginBottom="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:borderWidth="0dp"
+        android:layout_marginBottom="20dp"
+        android:elevation="20dp"
+        android:src="@drawable/addicon"
         app:fabSize="normal"
-        app:rippleColor="@color/colorPrimaryDark"/>
+        />
 
     <com.github.fabtransitionactivity.SheetLayout
         android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom"
-        app:ft_container_gravity="center"
+        android:elevation="2dp"
         app:ft_color="@color/colorPrimaryDark"
-        android:elevation="2dp"/>
+        app:ft_container_gravity="center" />
 
 </android.support.design.widget.CoordinatorLayout>

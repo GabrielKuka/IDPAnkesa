@@ -9,6 +9,14 @@ import android.widget.EditText;
 
 class Utilisation {
 
+    static final int CAPTURE_PHOTO = 876;
+    static final int DRAW_SIGNATURE = 987;
+
+    static final int WARNING = 2000;
+    static final int ERROR = 2001;
+    static final int INFORMATION = 2002;
+    static final int SUCCESS = 2003;
+
     // File manager variables
     static final int REQUEST_READWRITE_STORAGE = 1997;
     static final int FILE_MANAGER_DIALOG_ID = 1998;
@@ -32,7 +40,6 @@ class Utilisation {
     static final int MIN_CHARACTERS_emri = 5;
 
     // Dialog variables
-    static final int PASSWORD_DIALOG = 123456;
     static final int CAPTCHA_DIALOG = 123456789;
 
     static final String STATE_NAME = "Name";
@@ -44,14 +51,14 @@ class Utilisation {
     static final String STATE_ANKESA = "Ankesa e qytetarit";
     static final String STATE_KERKESA = "Kerkesa e qytetarit";
 
-    static boolean isNotEmpty(EditText editText) {
-        return editText.getText().toString().trim().length() > 0;
-    }
-
 
     @NonNull
     static String getString(EditText editText) {
         return editText.getText().toString().trim();
+    }
+
+    static void setString(EditText editText, String value){
+        editText.setText(value);
     }
 
     static boolean checkPermission(Context context, String permission) {
